@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  font-size: 18px;
+}
+
+.velocity-scale {
+  font-size: 24px;
+}
+.velocity-scale .text-xs {
+  font-size: 0.85rem;
+}
+.velocity-scale .text-sm {
+  font-size: 1rem;
+}
+.velocity-scale .text-base {
+  font-size: 1.125rem;
+}
+.velocity-scale .text-lg {
+  font-size: 1.35rem;
+}
+.velocity-scale .text-xl {
+  font-size: 1.5rem;
+}
+.velocity-scale .text-2xl {
+  font-size: 1.75rem;
+}
+.velocity-scale .text-3xl {
+  font-size: 2rem;
+}
+.velocity-scale .text-4xl {
+  font-size: 2.5rem;
+}
+.velocity-scale .text-\[10px\] {
+  font-size: 0.65rem;
+}
+.velocity-scale .text-\[11px\] {
+  font-size: 0.7rem;
+}
+.velocity-scale .text-\[9px\] {
+  font-size: 0.6rem;
+}

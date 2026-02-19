@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(where:*)",
+      "Bash(cmd.exe /c \"where node 2>NUL & where npm 2>NUL & where bun 2>NUL & where pnpm 2>NUL\")",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(node --version:*)",
+      "Bash(npm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next dev --port 3000)",
+      "Bash(start:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl:*)",
+      "Bash(node -e:*)",
+      "Bash(npx next build:*)",
+      "Bash(export PATH=\"/c/Users/tamir/AppData/Roaming/npm:$PATH:/c/Program Files/nodejs\")",
+      "Bash(export PATH=\"/c/Program Files/nodejs:/usr/bin:$PATH\")",
+      "Bash(npx next dev -p 3000)",
+      "Bash(tasklist:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/usr/bin\")",
+      "Bash(taskkill:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(where.exe:*)",
+      "Bash(timeout:*)",
+      "Bash(npx turbo run dev)",
+      "Bash(npx next dev -p 3001)"
+    ]
+  }
+}
