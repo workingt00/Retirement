@@ -6,8 +6,9 @@ import { DEFAULT_PLAN } from "@wealthpath/engine";
 
 interface PlanStore {
   plan: UserPlan | null;
+  dbPlanId: string | null;
   isDirty: boolean;
-  setPlan: (plan: UserPlan) => void;
+  setPlan: (plan: UserPlan, dbPlanId?: string) => void;
   updateField: (path: string, value: unknown) => void;
   toggleMove: (moveId: string) => void;
   updateMove: (moveId: string, field: keyof Move, value: unknown) => void;
@@ -33,34 +34,36 @@ function setNestedField(obj: Record<string, unknown>, path: string, value: unkno
 
 let saveTimeout: ReturnType<typeof setTimeout> | undefined;
 
-function debouncedSave(plan: UserPlan) {
+function debouncedSave(plan: UserPlan, dbPlanId: string | null) {
   clearTimeout(saveTimeout);
+  if (!dbPlanId) return; // No DB record yet — skip save
   saveTimeout = setTimeout(() => {
     fetch("/api/trpc/plan.update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(plan),
+      body: JSON.stringify({ id: dbPlanId, data: plan }),
     }).catch(() => {});
   }, 500);
 }
 
 export const usePlanStore = create<PlanStore>((set, get) => ({
   plan: null,
+  dbPlanId: null,
   isDirty: false,
 
-  setPlan: (plan) => set({ plan, isDirty: false }),
+  setPlan: (plan, dbPlanId) => set({ plan, dbPlanId: dbPlanId ?? get().dbPlanId, isDirty: false }),
 
   updateField: (path, value) => {
-    const { plan } = get();
+    const { plan, dbPlanId } = get();
     if (!plan) return;
     const updated = setNestedField(plan as unknown as Record<string, unknown>, path, value) as unknown as UserPlan;
     updated.updatedAt = new Date();
     set({ plan: updated, isDirty: true });
-    debouncedSave(updated);
+    debouncedSave(updated, dbPlanId);
   },
 
   toggleMove: (moveId) => {
-    const { plan } = get();
+    const { plan, dbPlanId } = get();
     if (!plan) return;
 
     const move = plan.moves.find((m) => m.id === moveId);
@@ -77,22 +80,22 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
 
     const updated = { ...plan, moves: newMoves, updatedAt: new Date() };
     set({ plan: updated, isDirty: true });
-    debouncedSave(updated);
+    debouncedSave(updated, dbPlanId);
   },
 
   updateMove: (moveId, field, value) => {
-    const { plan } = get();
+    const { plan, dbPlanId } = get();
     if (!plan) return;
     const newMoves = plan.moves.map((m) =>
       m.id === moveId ? { ...m, [field]: value } : m,
     );
     const updated = { ...plan, moves: newMoves, updatedAt: new Date() };
     set({ plan: updated, isDirty: true });
-    debouncedSave(updated);
+    debouncedSave(updated, dbPlanId);
   },
 
   addAccount: () => {
-    const { plan } = get();
+    const { plan, dbPlanId } = get();
     if (!plan) return;
     const newAccount: ProfileAccount = {
       id: crypto.randomUUID(),
@@ -104,33 +107,34 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
     };
     const updated = { ...plan, accounts: [...plan.accounts, newAccount], updatedAt: new Date() };
     set({ plan: updated, isDirty: true });
-    debouncedSave(updated);
+    debouncedSave(updated, dbPlanId);
   },
 
   removeAccount: (id) => {
-    const { plan } = get();
+    const { plan, dbPlanId } = get();
     if (!plan || plan.accounts.length <= 1) return;
     const updated = { ...plan, accounts: plan.accounts.filter((a) => a.id !== id), updatedAt: new Date() };
     set({ plan: updated, isDirty: true });
-    debouncedSave(updated);
+    debouncedSave(updated, dbPlanId);
   },
 
   updateAccount: (id, field, value) => {
-    const { plan } = get();
+    const { plan, dbPlanId } = get();
     if (!plan) return;
     const newAccounts = plan.accounts.map((a) =>
       a.id === id ? { ...a, [field]: value } : a,
     );
     const updated = { ...plan, accounts: newAccounts, updatedAt: new Date() };
     set({ plan: updated, isDirty: true });
-    debouncedSave(updated);
+    debouncedSave(updated, dbPlanId);
   },
 
   markClean: () => set({ isDirty: false }),
 
   reset: () => {
+    const { dbPlanId } = get();
     const plan = { ...DEFAULT_PLAN, id: crypto.randomUUID(), createdAt: new Date(), updatedAt: new Date() };
     set({ plan, isDirty: true });
-    debouncedSave(plan);
+    debouncedSave(plan, dbPlanId);
   },
 }));

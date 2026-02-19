@@ -29,7 +29,10 @@
       "Bash(where.exe:*)",
       "Bash(timeout:*)",
       "Bash(npx turbo run dev)",
-      "Bash(npx next dev -p 3001)"
+      "Bash(npx next dev -p 3001)",
+      "Bash(npx next info:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma db push:*)"
     ]
   }
 }

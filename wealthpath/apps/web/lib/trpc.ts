@@ -22,10 +22,11 @@ async function getUserTier(userId: string): Promise<"free" | "pro" | "premium"> 
 // ==================== PLAN ROUTER ====================
 const planRouter = t.router({
   list: authedProcedure.query(async ({ ctx }) => {
-    return prisma.plan.findMany({
+    const plans = await prisma.plan.findMany({
       where: { userId: ctx.userId },
       orderBy: { updatedAt: "desc" },
     });
+    return plans.map((p) => ({ ...p, data: JSON.parse(p.data) }));
   }),
 
   get: authedProcedure
@@ -36,7 +37,15 @@ const planRouter = t.router({
         include: { scenarios: true },
       });
       if (!plan) throw new TRPCError({ code: "NOT_FOUND" });
-      return plan;
+      return {
+        ...plan,
+        data: JSON.parse(plan.data),
+        scenarios: plan.scenarios.map((s) => ({
+          ...s,
+          snapshot: JSON.parse(s.snapshot),
+          config: JSON.parse(s.config),
+        })),
+      };
     }),
 
   create: authedProcedure
@@ -47,9 +56,10 @@ const planRouter = t.router({
       if (count >= TIER_LIMITS[tier].maxPlans) {
         throw new TRPCError({ code: "FORBIDDEN", message: `Plan limit reached for ${tier} tier` });
       }
-      return prisma.plan.create({
-        data: { userId: ctx.userId, name: input.name ?? "My Plan", data: input.data },
+      const created = await prisma.plan.create({
+        data: { userId: ctx.userId, name: input.name ?? "My Plan", data: JSON.stringify(input.data) },
       });
+      return { ...created, data: JSON.parse(created.data) };
     }),
 
   update: authedProcedure
@@ -59,7 +69,10 @@ const planRouter = t.router({
       if (!plan) throw new TRPCError({ code: "NOT_FOUND" });
       return prisma.plan.update({
         where: { id: input.id },
-        data: { ...(input.name && { name: input.name }), ...(input.data && { data: input.data }) },
+        data: {
+          ...(input.name && { name: input.name }),
+          ...(input.data && { data: JSON.stringify(input.data) }),
+        },
       });
     }),
 
@@ -93,7 +106,12 @@ const scenarioRouter = t.router({
       }
 
       return prisma.scenario.create({
-        data: { planId: input.planId, name: input.name, snapshot: input.snapshot, config: input.config },
+        data: {
+          planId: input.planId,
+          name: input.name,
+          snapshot: JSON.stringify(input.snapshot),
+          config: JSON.stringify(input.config),
+        },
       });
     }),
 
