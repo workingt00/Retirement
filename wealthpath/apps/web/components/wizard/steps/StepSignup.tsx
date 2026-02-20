@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useWizard } from "../store";
 
 export default function StepSignup() {
@@ -160,6 +161,22 @@ export default function StepSignup() {
           )}
         </motion.button>
       </motion.form>
+
+      {/* Login link */}
+      <motion.p
+        className="mt-4 text-center text-sm text-gray-400"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        Already registered?{" "}
+        <Link
+          href="/login"
+          className="font-medium text-amber-400 hover:text-amber-300 transition-colors"
+        >
+          Login here
+        </Link>
+      </motion.p>
 
       {/* Back */}
       <motion.button
