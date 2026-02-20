@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import CurrencyInput from "@/components/shared/CurrencyInput";
@@ -297,157 +297,155 @@ export default function ProfileIncomeTab() {
           onChange={(v) => updateField("income.deferralMode", v)}
         />
 
-        <AnimatePresence mode="wait" initial={false}>
-          {deferralMode === "percent" ? (
-            <motion.div
-              key="percent"
-              className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div>
-                <label className="mb-1 block text-xs font-medium" style={{ color: theme.textMuted }}>
-                  Deferral (% of W2 gross)
-                </label>
-                <div
-                  style={{
-                    backgroundColor: theme.surfaceGlass,
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                    border: `1px solid ${theme.borderGlass}`,
-                    borderRadius: 12,
-                    padding: 12,
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="range"
-                      min={0}
-                      max={50}
-                      step={1}
-                      value={deferralPercent}
-                      onChange={(e) => {
-                        const v = parseFloat(e.target.value);
-                        if (!isNaN(v)) updateField("income.deferralPercent", v);
-                      }}
-                      className="h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full"
-                      style={{
-                        accentColor: theme.gradientFrom,
-                        backgroundColor: `${theme.textMuted}20`,
-                      }}
-                    />
-                    <span
-                      className="rounded-md py-1 text-center text-sm font-medium"
-                      style={{
-                        width: 50, minWidth: 50, maxWidth: 50, flexShrink: 0, overflow: "hidden",
-                        fontVariantNumeric: "tabular-nums",
-                        background: `linear-gradient(135deg, ${theme.gradientFrom}15, ${theme.gradientTo}15)`,
-                        backgroundClip: "padding-box",
-                        fontFamily: theme.fontMono,
-                      }}
-                    >
-                      <span style={{
-                        background: `linear-gradient(135deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
-                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                      }}>
-                        {deferralPercent}%
-                      </span>
+        {/* CSS grid overlay: both panels always mounted, active panel visible via CSS opacity transition */}
+        <div className="mt-3" style={{ display: "grid" }}>
+          <div
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            style={{
+              gridArea: "1 / 1",
+              opacity: deferralMode === "percent" ? 1 : 0,
+              pointerEvents: deferralMode === "percent" ? "auto" : "none",
+              transition: "opacity 0.2s ease-in-out",
+            }}
+          >
+            <div>
+              <label className="mb-1 block text-xs font-medium" style={{ color: theme.textMuted }}>
+                Deferral (% of W2 gross)
+              </label>
+              <div
+                style={{
+                  backgroundColor: theme.surfaceGlass,
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  border: `1px solid ${theme.borderGlass}`,
+                  borderRadius: 12,
+                  padding: 12,
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={50}
+                    step={1}
+                    value={deferralPercent}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      if (!isNaN(v)) updateField("income.deferralPercent", v);
+                    }}
+                    className="h-2 min-w-0 flex-1 cursor-pointer appearance-none rounded-full"
+                    style={{
+                      accentColor: theme.gradientFrom,
+                      backgroundColor: `${theme.textMuted}20`,
+                    }}
+                    tabIndex={deferralMode === "percent" ? 0 : -1}
+                  />
+                  <span
+                    className="rounded-md py-1 text-center text-sm font-medium"
+                    style={{
+                      width: 50, minWidth: 50, maxWidth: 50, flexShrink: 0, overflow: "hidden",
+                      fontVariantNumeric: "tabular-nums",
+                      background: `linear-gradient(135deg, ${theme.gradientFrom}15, ${theme.gradientTo}15)`,
+                      backgroundClip: "padding-box",
+                      fontFamily: theme.fontMono,
+                    }}
+                  >
+                    <span style={{
+                      background: `linear-gradient(135deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+                      WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+                    }}>
+                      {deferralPercent}%
                     </span>
-                  </div>
+                  </span>
                 </div>
-                {deferralBase > 0 && deferralPercent > 0 && (
-                  <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
-                    {fmtCurrency(annualDeferral)}/yr
-                  </p>
-                )}
               </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="dollar"
-              className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <CurrencyInput
-                label="$ per paycheck"
-                value={deferralDollarPerPaycheck}
-                onChange={(v) => updateField("income.deferralDollarPerPaycheck", v)}
-              />
-              <div>
-                <label className="mb-1 block text-xs font-medium" style={{ color: theme.textMuted }}>
-                  Pay frequency
-                </label>
-                <select
-                  value={payFrequency}
-                  onChange={(e) => updateField("income.payFrequency", Number(e.target.value))}
-                  className="w-full rounded-lg py-3 pl-3 pr-8"
-                  style={{
-                    backgroundColor: theme.surfaceGlass,
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                    border: `1px solid ${theme.borderGlass}`,
-                    color: theme.text,
-                    minHeight: "48px",
-                  }}
-                >
-                  {PAY_FREQUENCY_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                {deferralBase > 0 && deferralDollarPerPaycheck > 0 && (
-                  <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
-                    ≈ {effectiveDeferralPct.toFixed(1)}% of gross ({fmtCurrency(annualDeferral)}/yr)
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              {deferralBase > 0 && deferralPercent > 0 && (
+                <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+                  {fmtCurrency(annualDeferral)}/yr
+                </p>
+              )}
+            </div>
+          </div>
+          <div
+            className="grid grid-cols-1 gap-4 md:grid-cols-2"
+            style={{
+              gridArea: "1 / 1",
+              opacity: deferralMode === "dollar" ? 1 : 0,
+              pointerEvents: deferralMode === "dollar" ? "auto" : "none",
+              transition: "opacity 0.2s ease-in-out",
+            }}
+          >
+            <CurrencyInput
+              label="$ per paycheck"
+              value={deferralDollarPerPaycheck}
+              onChange={(v) => updateField("income.deferralDollarPerPaycheck", v)}
+            />
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
+                Pay frequency
+              </label>
+              <select
+                value={payFrequency}
+                onChange={(e) => updateField("income.payFrequency", Number(e.target.value))}
+                className="w-full py-2 pl-3 pr-8 text-sm outline-none transition-colors focus:ring-2"
+                style={{
+                  backgroundColor: theme.surface,
+                  border: `1px solid ${theme.textMuted}40`,
+                  borderRadius: theme.radiusInput,
+                  color: theme.text,
+                  fontFamily: theme.fontFamily,
+                  minHeight: "44px",
+                }}
+                tabIndex={deferralMode === "dollar" ? 0 : -1}
+              >
+                {PAY_FREQUENCY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {deferralBase > 0 && deferralDollarPerPaycheck > 0 && (
+                <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+                  ≈ {effectiveDeferralPct.toFixed(1)}% of gross ({fmtCurrency(annualDeferral)}/yr)
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Deferral insight — right after deferral section */}
-      <AnimatePresence>
-        {deferralBase > 0 && annualDeferral > 0 && (
-          <motion.div
-            key="deferral-insight"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <InsightCard icon="chart" variant="info">
-              {isHorizon ? (
-                <div>
-                  You&apos;re putting away <strong>{fmtCurrency(annualDeferral)}/yr</strong> — that&apos;s{" "}
-                  <strong>{fmtCurrency(annualDeferral / 12)}/mo</strong> working for your future self
-                </div>
-              ) : (
-                <div>
-                  Annual deferral: <strong>{fmtCurrency(annualDeferral)}</strong> ({effectiveDeferralPct.toFixed(1)}% of gross)
-                </div>
-              )}
-            </InsightCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Deferral insight — always rendered, content updates in place */}
+      <motion.div variants={staggerItem}>
+        <InsightCard
+          icon={deferralBase > 0 && annualDeferral > 0 ? "chart" : "info"}
+          variant={deferralBase > 0 && annualDeferral > 0 ? "info" : "neutral"}
+        >
+          {deferralBase > 0 && annualDeferral > 0 ? (
+            isHorizon ? (
+              <div>
+                You&apos;re putting away <strong>{fmtCurrency(annualDeferral)}/yr</strong> — that&apos;s{" "}
+                <strong>{fmtCurrency(annualDeferral / 12)}/mo</strong> working for your future self
+              </div>
+            ) : (
+              <div>
+                Annual deferral: <strong>{fmtCurrency(annualDeferral)}</strong> ({effectiveDeferralPct.toFixed(1)}% of gross)
+              </div>
+            )
+          ) : (
+            <div style={{ color: theme.textMuted }}>
+              {isHorizon ? "Set your deferral above to see how much you\u2019re saving" : "Deferral not yet configured"}
+            </div>
+          )}
+        </InsightCard>
+      </motion.div>
 
-      {/* Leaving money on table — shown next to deferral since it's about raising your % */}
-      <AnimatePresence>
-        {leavingOnTable > 0 && (
-          <motion.div
-            key="leaving-on-table"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+      {/* Leaving money on table — always rendered, content updates in place */}
+      {matchTiers.length > 0 && (
+        <motion.div variants={staggerItem}>
+          <InsightCard
+            icon={leavingOnTable > 0 ? "info" : "sparkle"}
+            variant={leavingOnTable > 0 ? "neutral" : "success"}
           >
-            <InsightCard icon="info" variant="neutral">
-              {isHorizon ? (
+            {leavingOnTable > 0 ? (
+              isHorizon ? (
                 <div>
                   💡 You&apos;re only deferring {effectiveDeferralPct.toFixed(0)}% but your employer matches up to {maxMatchablePct}% — you&apos;re leaving{" "}
                   <strong>{fmtCurrency(leavingOnTable)}/yr</strong> of free money on the table!
@@ -456,11 +454,17 @@ export default function ProfileIncomeTab() {
                 <div>
                   ⚠️ Deferral below match ceiling — <strong>{fmtCurrency(leavingOnTable)}/yr</strong> unmatched
                 </div>
-              )}
-            </InsightCard>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              )
+            ) : (
+              isHorizon ? (
+                <div>You&apos;re capturing your full employer match — nice work! 🎯</div>
+              ) : (
+                <div>Full match captured — no unmatched employer contributions</div>
+              )
+            )}
+          </InsightCard>
+        </motion.div>
+      )}
 
       {/* ═══════════════ EMPLOYER MATCH TIERS ═══════════════ */}
       <motion.div variants={staggerItem}>

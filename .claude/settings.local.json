@@ -34,7 +34,9 @@
       "Bash(npx prisma generate:*)",
       "Bash(npx prisma db push:*)",
       "WebFetch(domain:godly.website)",
-      "Bash(npx next dev:*)"
+      "Bash(npx next dev:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
