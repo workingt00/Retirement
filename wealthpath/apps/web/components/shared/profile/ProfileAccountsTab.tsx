@@ -1,8 +1,11 @@
 "use client";
 
+import { motion, AnimatePresence } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import CurrencyInput from "@/components/shared/CurrencyInput";
+import InsightCard from "@/components/shared/profile/InsightCard";
+import { staggerContainer, staggerItem, scaleIn } from "@/lib/animations";
 import type { ProfileAccount, AccountType } from "@wealthpath/engine";
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -39,17 +42,33 @@ function AccountCard({ account }: { account: ProfileAccount }) {
     updateAccount(account.id, "investmentStrategyPreset", matchingPreset ? matchingPreset.key : "custom");
   };
 
+  const monthlyContribution = Math.round(account.annualContribution / 12);
+
   return (
-    <div
-      className="rounded-xl border p-5"
-      style={{ backgroundColor: theme.surface, borderColor: `${theme.textMuted}20` }}
+    <motion.div
+      className="rounded-xl p-5"
+      style={{
+        backgroundColor: theme.surfaceGlass,
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
+        border: `1px solid ${theme.borderGlass}`,
+        boxShadow: theme.shadowCard,
+      }}
+      whileHover={{ boxShadow: theme.shadowCardHover }}
+      transition={{ duration: 0.2 }}
     >
       <div className="mb-4 flex items-center justify-between">
         <select
           value={account.accountType}
           onChange={(e) => updateAccount(account.id, "accountType", e.target.value)}
           className="rounded-lg border py-2 pl-3 pr-8 text-sm font-medium"
-          style={{ backgroundColor: theme.bg, color: theme.text, borderColor: `${theme.textMuted}40` }}
+          style={{
+            backgroundColor: theme.surfaceGlass,
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            color: theme.text,
+            borderColor: `${theme.textMuted}40`,
+          }}
         >
           {Object.entries(ACCOUNT_TYPE_LABELS).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
@@ -72,11 +91,18 @@ function AccountCard({ account }: { account: ProfileAccount }) {
           value={account.currentBalance}
           onChange={(v) => updateAccount(account.id, "currentBalance", v)}
         />
-        <CurrencyInput
-          label="Annual Contribution"
-          value={account.annualContribution}
-          onChange={(v) => updateAccount(account.id, "annualContribution", v)}
-        />
+        <div>
+          <CurrencyInput
+            label="Annual Contribution"
+            value={account.annualContribution}
+            onChange={(v) => updateAccount(account.id, "annualContribution", v)}
+          />
+          {account.annualContribution > 0 && (
+            <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
+              <strong>${monthlyContribution.toLocaleString()}/month</strong>
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="mt-4">
@@ -84,20 +110,27 @@ function AccountCard({ account }: { account: ProfileAccount }) {
           Investment Strategy
         </label>
         <div className="mb-3 flex gap-2">
-          {STRATEGY_PRESETS.map((preset) => (
-            <button
-              key={preset.key}
-              onClick={() => handleStrategyClick(preset)}
-              className="rounded-lg border-2 px-4 py-2 text-sm font-medium transition-colors"
-              style={{
-                borderColor: account.investmentStrategyPreset === preset.key ? preset.color : `${theme.textMuted}30`,
-                backgroundColor: account.investmentStrategyPreset === preset.key ? `${preset.color}15` : "transparent",
-                color: account.investmentStrategyPreset === preset.key ? preset.color : theme.textMuted,
-              }}
-            >
-              {preset.label}
-            </button>
-          ))}
+          {STRATEGY_PRESETS.map((preset) => {
+            const isSelected = account.investmentStrategyPreset === preset.key;
+            return (
+              <button
+                key={preset.key}
+                onClick={() => handleStrategyClick(preset)}
+                className="rounded-lg border-2 px-4 py-2 text-sm font-medium transition-colors"
+                style={{
+                  borderColor: isSelected ? `${preset.color}40` : `${theme.textMuted}30`,
+                  backgroundColor: isSelected ? "transparent" : "transparent",
+                  backgroundImage: isSelected
+                    ? `linear-gradient(135deg, ${preset.color}20, ${preset.color}10)`
+                    : "none",
+                  color: isSelected ? preset.color : theme.textMuted,
+                  boxShadow: isSelected ? `0 0 12px ${preset.color}20` : "none",
+                }}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -117,7 +150,7 @@ function AccountCard({ account }: { account: ProfileAccount }) {
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -128,28 +161,60 @@ export default function ProfileAccountsTab() {
 
   if (!plan) return null;
 
+  const totalBalance = plan.accounts.reduce((sum, a) => sum + a.currentBalance, 0);
+
   return (
-    <div className="space-y-4">
-      <div
-        className="rounded-xl p-4"
-        style={{ backgroundColor: `${theme.primary}08`, border: `1px solid ${theme.primary}20` }}
-      >
-        <p className="text-sm" style={{ color: theme.primary }}>
-          We've pre-filled your savings info from setup. Split this into individual accounts for more accurate projections.
-        </p>
-      </div>
+    <motion.div
+      className="space-y-4"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
+      <motion.div variants={staggerItem}>
+        <div
+          className="rounded-xl p-4"
+          style={{ backgroundColor: `${theme.primary}08`, border: `1px solid ${theme.primary}20` }}
+        >
+          <p className="text-sm" style={{ color: theme.primary }}>
+            We've pre-filled your savings info from setup. Split this into individual accounts for more accurate projections.
+          </p>
+        </div>
+      </motion.div>
 
-      {plan.accounts.map((account) => (
-        <AccountCard key={account.id} account={account} />
-      ))}
+      {totalBalance > 0 && (
+        <motion.div variants={staggerItem}>
+          <InsightCard icon="chart" variant="info">
+            Total portfolio balance: <strong>${totalBalance.toLocaleString()}</strong>
+          </InsightCard>
+        </motion.div>
+      )}
 
-      <button
-        onClick={addAccount}
-        className="w-full rounded-xl border-2 border-dashed py-4 text-sm font-medium transition-colors hover:opacity-80"
-        style={{ borderColor: `${theme.primary}40`, color: theme.primary }}
-      >
-        + Add Account
-      </button>
-    </div>
+      <AnimatePresence mode="popLayout">
+        {plan.accounts.map((account) => (
+          <motion.div
+            key={account.id}
+            variants={scaleIn}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            layout
+          >
+            <AccountCard account={account} />
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <motion.div variants={staggerItem}>
+        <motion.button
+          onClick={addAccount}
+          className="w-full rounded-xl border-2 border-dashed py-4 text-sm font-medium transition-colors"
+          style={{ borderColor: theme.gradientFrom, color: theme.primary }}
+          whileHover={{ boxShadow: theme.glowPrimary }}
+          transition={{ duration: 0.2 }}
+        >
+          + Add Account
+        </motion.button>
+      </motion.div>
+    </motion.div>
   );
 }

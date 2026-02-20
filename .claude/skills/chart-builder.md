@@ -40,7 +40,7 @@ You do **NOT** touch:
 - **Y-axis formatting**: `$0`, `$500K`, `$1M`, `$1.5M` — always abbreviated, never raw numbers.
 - **Hover tooltips**: Every chart has hover tooltips with relevant breakdowns (account types, dollar amounts, percentages).
 - **Mount animations**: Areas fill left-to-right 800ms, bars grow from baseline 600ms.
-- **Data update transitions**: 400ms smooth interpolation when data changes.
+- **Data update transitions**: 400ms smooth interpolation when data changes. Never use `AnimatePresence` or spring mount/unmount for values that change continuously (sliders, live data). Use CSS transitions or Framer Motion `useSpring`/`useMotionValue` for smooth interpolation instead.
 - **Responsive**: Charts must be fully usable at 375px mobile. Legends collapse, tooltips reposition, axes simplify.
 
 ## Theme Colors

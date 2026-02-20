@@ -1,66 +1,123 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import Link from "next/link";
 
-const TAB_WEIGHTS = [
-  { tab: "Personal", weight: 20, check: "personal" },
-  { tab: "Income", weight: 15, check: "income" },
-  { tab: "Accounts", weight: 25, check: "accounts" },
-  { tab: "Taxes", weight: 15, check: "taxes" },
-  { tab: "Benefits", weight: 10, check: "benefits" },
-  { tab: "Expenses & Risk", weight: 15, check: "expenses" },
-] as const;
+type TabKey = "personal" | "income" | "accounts" | "taxes" | "benefits" | "expenses";
 
-export function useProfileCompletion() {
-  const plan = usePlanStore((s) => s.plan);
-  if (!plan) return { score: 0, lowestTab: "Personal" };
+const TAB_WEIGHTS: Record<TabKey, number> = {
+  personal: 20,
+  income: 15,
+  accounts: 25,
+  taxes: 15,
+  benefits: 10,
+  expenses: 15,
+};
 
-  let score = 0;
-  let lowestTab = TAB_WEIGHTS[0].tab;
-  let lowestWeight = Infinity;
+const TAB_LABELS: Record<TabKey, string> = {
+  personal: "Personal",
+  income: "Income",
+  accounts: "Accounts",
+  taxes: "Taxes",
+  benefits: "Benefits",
+  expenses: "Expenses & Risk",
+};
 
-  // Personal: all required fields filled
-  const personalComplete =
-    plan.personal.currentAge > 0 &&
-    plan.personal.retirementAge > 0 &&
-    plan.personal.gender != null &&
-    plan.personal.filingStatus != null &&
-    plan.personal.state != null;
-  if (personalComplete) score += 20;
-  else if (20 < lowestWeight) { lowestWeight = 20; lowestTab = "Personal"; }
+export interface ProfileCompletionResult {
+  score: number;
+  lowestTab: string;
+  tabCompletion: Record<TabKey, number>;
+  justCompleted: TabKey | null;
+}
 
-  // Income: annual_salary filled
-  const incomeComplete = plan.income.w2Salary > 0;
-  if (incomeComplete) score += 15;
-  else if (15 < lowestWeight) { lowestWeight = 15; lowestTab = "Income"; }
+function computeTabCompletion(plan: ReturnType<typeof usePlanStore.getState>["plan"]): Record<TabKey, number> {
+  const result: Record<TabKey, number> = {
+    personal: 0, income: 0, accounts: 0, taxes: 0, benefits: 0, expenses: 0,
+  };
 
-  // Accounts: at least one complete account entry
-  const accountsComplete =
+  if (!plan) return result;
+
+  // Personal
+  const personalChecks = [
+    plan.personal.currentAge > 0,
+    plan.personal.retirementAge > 0,
+    plan.personal.gender != null,
+    plan.personal.filingStatus != null,
+    plan.personal.state != null,
+  ];
+  result.personal = personalChecks.filter(Boolean).length / personalChecks.length;
+
+  // Income
+  result.income = plan.income.w2Salary > 0 ? 1 : 0;
+
+  // Accounts
+  const hasCompleteAccount =
     plan.accounts.length > 0 &&
     plan.accounts.some((a) => a.currentBalance > 0 && a.expectedReturnRate > 0);
-  if (accountsComplete) score += 25;
-  else if (25 < lowestWeight) { lowestWeight = 25; lowestTab = "Accounts"; }
+  result.accounts = hasCompleteAccount ? 1 : 0;
 
-  // Taxes: deduction_type and contribution_preference filled
-  const taxesComplete = plan.tax.deductionType != null && plan.tax.contributionPreference != null;
-  if (taxesComplete) score += 15;
-  else if (15 < lowestWeight) { lowestWeight = 15; lowestTab = "Taxes"; }
+  // Taxes
+  const taxChecks = [
+    plan.tax.deductionType != null,
+    plan.tax.contributionPreference != null,
+  ];
+  result.taxes = taxChecks.filter(Boolean).length / taxChecks.length;
 
-  // Benefits: ss_claiming_age filled
-  const benefitsComplete = plan.socialSecurity.claimingAge >= 62;
-  if (benefitsComplete) score += 10;
-  else if (10 < lowestWeight) { lowestWeight = 10; lowestTab = "Benefits"; }
+  // Benefits
+  result.benefits = plan.socialSecurity.claimingAge >= 62 ? 1 : 0;
 
-  // Expenses & Risk: annual_living_expenses and risk_tolerance filled
-  const expensesComplete =
-    plan.expensesRisk.annualLivingExpenses > 0 &&
-    plan.expensesRisk.riskTolerance != null;
-  if (expensesComplete) score += 15;
-  else if (15 < lowestWeight) { lowestWeight = 15; lowestTab = "Expenses & Risk"; }
+  // Expenses
+  const expenseChecks = [
+    plan.expensesRisk.annualLivingExpenses > 0,
+    plan.expensesRisk.riskTolerance != null,
+  ];
+  result.expenses = expenseChecks.filter(Boolean).length / expenseChecks.length;
 
-  return { score, lowestTab };
+  return result;
+}
+
+export function useProfileCompletion(): ProfileCompletionResult {
+  const plan = usePlanStore((s) => s.plan);
+  const prevCompletion = useRef<Record<TabKey, number> | null>(null);
+
+  const tabCompletion = computeTabCompletion(plan);
+
+  // Compute aggregate score
+  let score = 0;
+  let lowestTab = "Personal";
+  let lowestWeightedScore = -1;
+
+  for (const key of Object.keys(TAB_WEIGHTS) as TabKey[]) {
+    const weight = TAB_WEIGHTS[key];
+    score += tabCompletion[key] >= 1 ? weight : 0;
+
+    if (tabCompletion[key] < 1) {
+      const weightedScore = weight * (1 - tabCompletion[key]);
+      if (weightedScore > lowestWeightedScore) {
+        lowestWeightedScore = weightedScore;
+        lowestTab = TAB_LABELS[key];
+      }
+    }
+  }
+
+  // Detect if a tab just completed
+  let justCompleted: TabKey | null = null;
+  if (prevCompletion.current) {
+    for (const key of Object.keys(TAB_WEIGHTS) as TabKey[]) {
+      if (tabCompletion[key] >= 1 && prevCompletion.current[key] < 1) {
+        justCompleted = key;
+        break;
+      }
+    }
+  }
+
+  useEffect(() => {
+    prevCompletion.current = { ...tabCompletion };
+  });
+
+  return { score, lowestTab, tabCompletion, justCompleted };
 }
 
 export default function ProfileCompletion() {

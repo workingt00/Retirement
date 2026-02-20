@@ -15,6 +15,7 @@ These are non-negotiable. Every agent, every PR, every line of code must follow 
 ### Never Remove Without Verifying
 - **Do not remove any functionality, component, utility, or code path without first confirming it is truly unused.** Search for all references, check imports, trace call sites. If in doubt, keep it.
 - Deleting "dead" code that turns out to be alive is one of the most expensive mistakes. Verify first, always.
+- **When fixing a bug or improving behavior, fix the implementation — do not remove the feature.** If an animation is janky, fix the animation. If a component flickers, fix the rendering. Never "solve" a problem by deleting the thing the user asked for. The user's intent is sacred — preserve it, improve it, never discard it.
 
 ### Consistent, Sleek UI
 - The UI must feel cohesive across every page, mode, and interaction. No orphaned styles, no inconsistent spacing, no mismatched component patterns.
@@ -50,6 +51,15 @@ Our job is to make this **effortless** for the user. They should never have to t
 - **Clear financial language:** Every financial term gets a tooltip. Horizon mode uses warm, approachable language. Velocity mode uses precise technical terms. Both explain, never assume knowledge.
 - **Error prevention over error messages:** Guide users toward valid inputs with constraints, ranges, and smart validation. Don't let them enter nonsense, then scold them for it.
 - **Delightful details:** Micro-interactions, smooth transitions, satisfying chart animations. These small moments are what separate a great product from a good one.
+
+### No Financial Advice (RIA Compliance)
+WealthPath is a planning simulator, not a registered investment advisor. All UI copy — insight cards, tooltips, labels, contextual messages — must present **factual observations about the user's own data**, never recommendations or opinions.
+- No "should", "consider", "we recommend" — ever
+- Observations only: "Your savings rate is X%" not "You should save more"
+- Neutral framing: "Claiming at 62 reduces benefits by ~30% vs FRA" not "Wait until 70"
+- No comparative judgments against benchmarks or averages
+- Show math, not opinions — let the user decide what the numbers mean
+- Include "For educational purposes only. Not financial advice." disclaimer where projections are shown
 
 ## Tech Stack
 - **Framework:** Next.js 14+ (App Router), React 18, TypeScript (strict mode)

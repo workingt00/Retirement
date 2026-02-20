@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import CurrencyInput from "@/components/shared/CurrencyInput";
+import InsightCard from "@/components/shared/profile/InsightCard";
+import AllocationDonut from "@/components/shared/profile/AllocationDonut";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 import type { MajorExpenditure } from "@wealthpath/engine";
+
+function fmtCurrency(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${Math.round(v / 1_000)}K`;
+  return `$${Math.round(v).toLocaleString()}`;
+}
 
 const RISK_PRESETS: Record<string, { stocks: number; bonds: number; cash: number }> = {
   low: { stocks: 30, bonds: 50, cash: 20 },
@@ -49,9 +58,14 @@ export default function ProfileExpensesRiskTab() {
   };
 
   return (
-    <div className="space-y-8">
+    <motion.div
+      className="space-y-8"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Expenses */}
-      <section>
+      <motion.section variants={staggerItem}>
         <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.text }}>Expenses</h3>
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -66,6 +80,12 @@ export default function ProfileExpensesRiskTab() {
               onChange={(v) => updateField("expensesRisk.healthcareExpenses", v)}
             />
           </div>
+
+          {er.annualLivingExpenses > 0 && (
+            <InsightCard icon="info" variant="info">
+              Monthly living expenses: <strong>{fmtCurrency(Math.round(er.annualLivingExpenses / 12))}/month</strong>
+            </InsightCard>
+          )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
@@ -83,7 +103,7 @@ export default function ProfileExpensesRiskTab() {
                 max={10}
                 step={0.5}
                 className="w-24 rounded-lg border px-3 py-3"
-                style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, fontFamily: theme.fontMono, minHeight: "48px" }}
+                style={{ backgroundColor: theme.surfaceGlass, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: theme.text, borderColor: theme.borderGlass, fontFamily: theme.fontFamily, minHeight: "48px" }}
               />
             </div>
             <CurrencyInput
@@ -111,7 +131,7 @@ export default function ProfileExpensesRiskTab() {
                   onChange={(e) => updateExpenditure(i, "label", e.target.value)}
                   placeholder="e.g., Kids' College"
                   className="flex-1 rounded-lg border px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40` }}
+                  style={{ backgroundColor: theme.surfaceGlass, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: theme.text, borderColor: theme.borderGlass }}
                 />
                 <input
                   type="number"
@@ -119,7 +139,7 @@ export default function ProfileExpensesRiskTab() {
                   onChange={(e) => updateExpenditure(i, "year", parseInt(e.target.value) || 0)}
                   placeholder="Year"
                   className="w-24 rounded-lg border px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, fontFamily: theme.fontMono }}
+                  style={{ backgroundColor: theme.surfaceGlass, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: theme.text, borderColor: theme.borderGlass, fontFamily: theme.fontFamily }}
                 />
                 <input
                   type="number"
@@ -127,7 +147,7 @@ export default function ProfileExpensesRiskTab() {
                   onChange={(e) => updateExpenditure(i, "amount", parseFloat(e.target.value) || 0)}
                   placeholder="Amount"
                   className="w-32 rounded-lg border px-3 py-2 text-sm"
-                  style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, fontFamily: theme.fontMono }}
+                  style={{ backgroundColor: theme.surfaceGlass, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: theme.text, borderColor: theme.borderGlass, fontFamily: theme.fontFamily }}
                 />
                 <button
                   onClick={() => removeExpenditure(i)}
@@ -147,10 +167,10 @@ export default function ProfileExpensesRiskTab() {
             </button>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Risk & Allocation */}
-      <section>
+      <motion.section variants={staggerItem}>
         <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.text }}>Risk & Allocation</h3>
         <div className="space-y-4">
           <div>
@@ -159,21 +179,44 @@ export default function ProfileExpensesRiskTab() {
             </label>
             <div className="flex gap-3">
               {(["low", "medium", "high"] as const).map((level) => (
-                <button
+                <motion.button
                   key={level}
                   onClick={() => handleRiskChange(level)}
                   className="rounded-xl border-2 px-5 py-3 text-sm font-medium capitalize transition-colors"
                   style={{
-                    borderColor: er.riskTolerance === level ? theme.primary : `${theme.textMuted}30`,
-                    backgroundColor: er.riskTolerance === level ? `${theme.primary}10` : "transparent",
-                    color: er.riskTolerance === level ? theme.primary : theme.textMuted,
+                    borderColor: er.riskTolerance === level ? `${theme.gradientFrom}50` : `${theme.textMuted}30`,
+                    background: er.riskTolerance === level ? `linear-gradient(135deg, ${theme.gradientFrom}15, ${theme.gradientTo}15)` : "transparent",
+                    color: er.riskTolerance === level ? "transparent" : theme.textMuted,
+                    boxShadow: er.riskTolerance === level ? theme.glowPrimary : "none",
+                    ...(er.riskTolerance === level ? {
+                      backgroundClip: "padding-box",
+                    } : {}),
                   }}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
                 >
-                  {level}
-                </button>
+                  {er.riskTolerance === level ? (
+                    <span style={{
+                      background: `linear-gradient(135deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                    }}>
+                      {level}
+                    </span>
+                  ) : level}
+                </motion.button>
               ))}
             </div>
           </div>
+
+          {/* Allocation Donut */}
+          <AllocationDonut
+            stocks={er.stocksPct}
+            bonds={er.bondsPct}
+            cash={er.cashPct}
+            alternatives={er.alternativesPct}
+          />
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[
@@ -198,16 +241,11 @@ export default function ProfileExpensesRiskTab() {
                   min={0}
                   max={100}
                   className="w-full rounded-lg border px-3 py-3"
-                  style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, fontFamily: theme.fontMono, minHeight: "48px" }}
+                  style={{ backgroundColor: theme.surfaceGlass, backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: theme.text, borderColor: theme.borderGlass, fontFamily: theme.fontFamily, minHeight: "48px" }}
                 />
               </div>
             ))}
           </div>
-          {!allocationValid && (
-            <p className="text-sm font-medium" style={{ color: "#EF4444" }}>
-              Allocation must sum to 100% (currently {allocationSum}%)
-            </p>
-          )}
 
           <div className="flex items-center gap-3">
             <button
@@ -216,17 +254,20 @@ export default function ProfileExpensesRiskTab() {
               aria-checked={er.preferTaxEfficient}
               onClick={() => updateField("expensesRisk.preferTaxEfficient", !er.preferTaxEfficient)}
               className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
-              style={{ backgroundColor: er.preferTaxEfficient ? theme.primary : `${theme.textMuted}40` }}
+              style={{ background: er.preferTaxEfficient ? `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})` : `${theme.textMuted}40` }}
             >
               <span
-                className="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
-                style={{ transform: er.preferTaxEfficient ? "translateX(22px)" : "translateX(2px)" }}
+                className="inline-block h-5 w-5 rounded-full shadow transition-transform"
+                style={{
+                  transform: er.preferTaxEfficient ? "translateX(22px)" : "translateX(2px)",
+                  background: er.preferTaxEfficient ? `linear-gradient(135deg, ${theme.gradientFrom}, ${theme.gradientTo})` : "white",
+                }}
               />
             </button>
             <span className="text-sm" style={{ color: theme.text }}>Prefer Tax-Efficient Investments</span>
           </div>
         </div>
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   );
 }
