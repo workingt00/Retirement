@@ -1,5 +1,10 @@
 import { Move, UserPlan, TaxBracket } from './types';
 
+/** 2025 IRS 401(k) elective deferral limit */
+export const IRS_401K_ELECTIVE_LIMIT = 23500;
+/** 2025 IRS catch-up contribution limit (age 50+) */
+export const IRS_401K_CATCHUP_LIMIT = 7500;
+
 export const FEDERAL_BRACKETS_MFJ: TaxBracket[] = [
   { floor: 0,      ceiling: 23850,    rate: 0.10 },
   { floor: 23850,  ceiling: 96950,    rate: 0.12 },
@@ -128,7 +133,7 @@ export const DEFAULT_PLAN: UserPlan = {
   createdAt: new Date(),
   updatedAt: new Date(),
   personal: { currentAge: 41, retirementAge: 55, filingStatus: "MFJ", state: "Georgia", stateEffectiveRate: 0.0549, dependents: 0 },
-  income: { w2Salary: 180000, w9Income: 15000, annualRaise: 3, partTimeInRetirement: false, partTimeAmount: 0, bonusIncome: 0, otherIncome: 0, salaryGrowthRate: 3, employerMatchPct: 0, employerMatchCapPct: 0 },
+  income: { w2Salary: 180000, w9Income: 15000, annualRaise: 3, partTimeInRetirement: false, partTimeAmount: 0, bonusIncome: 0, commissionIncome: 0, rsuIncome: 0, otherIncome: 0, salaryGrowthRate: 3, employerMatchPct: 0, employerMatchCapPct: 0, deferralMode: "percent" as const, deferralPercent: 0, deferralDollarPerPaycheck: 0, payFrequency: 24 as const, maxDeferralPct: 0, employerMatchTiers: [] },
   socialSecurity: { monthlyBenefitAtFRA: 3000, quartersEarned: 40, claimingAge: 70, spouseSsBenefit: 0 },
   balances: { traditional401k: 56000, rothIRA: 5500, privatePortfolio: 200000, foreignPension: 145000, plan529: 0 },
   housing: { ownershipType: "own_mortgage", monthlyMortgage: 2684, monthlyPropertyTax: 300, monthlyInsurance: 250, monthlyHOA: 115, mortgageBalance: 467977, mortgageEndAge: 67 },
@@ -141,7 +146,7 @@ export const DEFAULT_PLAN: UserPlan = {
   healthcare: { monthlyPremium: 450, chronicConditions: "none", projectedAnnualAge50Plus: 18000 },
   lifestyle: { annualTravelHobby: 43000, expectToRelocate: false, expectToDownsize: false, inflationRate: 3 },
   investment: { style: "moderate", growth401k: 0.10, growthRothPortfolio: 0.12 },
-  goalSolver: { targetNetWorth: 2000000, employerMatchPercent: 4 },
+  goalSolver: { targetNetWorth: 2000000 },
   growthRates: { traditional401k: 0.10, roth401k: 0.10, traditionalIRA: 0.10, rothIRA: 0.12, privatePortfolio: 0.12, foreignPension: 0.12, plan529: 0.10 },
   sensitivity: { bearAdjustment: -0.04, bullAdjustment: 0.02 },
   tax: { mode: "BRACKET", standardDeduction: 32200, cgTaxablePortion: 0.75, ssTaxablePortion: 0.85, flatFederalRate: 0.139, deductionType: "standard", contributionPreference: "both", taxableBrokerageBalance: 0, amtApplicable: false },

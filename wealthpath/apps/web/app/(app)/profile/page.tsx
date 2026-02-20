@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
       {/* Mobile: compact projection bar */}
       <div className="mb-4 md:hidden">
-        <ProjectionPulse compact />
+        <ProjectionPulse compact activeTab={activeTab} />
       </div>
 
       {/* Tab navigation — glassmorphic pill bar */}
@@ -181,7 +181,7 @@ export default function ProfilePage() {
         {/* Right: Projection Pulse (desktop only) */}
         <div className="hidden w-72 shrink-0 md:block lg:w-80">
           <div className="sticky top-6">
-            <ProjectionPulse />
+            <ProjectionPulse activeTab={activeTab} />
           </div>
         </div>
       </div>

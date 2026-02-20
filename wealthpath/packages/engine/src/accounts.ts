@@ -1,6 +1,66 @@
 // Account balance computations for the 7 account types.
 // Each function computes end-of-year balance given prior balance, contributions, withdrawals, growth.
 
+import type { EmployerMatchTier } from './types';
+
+/**
+ * Compute the annual 401(k) employee deferral.
+ * Supports percent-of-salary and dollar-per-paycheck modes,
+ * respects an optional employer max-deferral cap and the IRS elective limit.
+ */
+export function computeAnnualDeferral(
+  grossSalary: number,
+  mode: "percent" | "dollar",
+  deferralPercent: number,
+  deferralDollarPerPaycheck: number,
+  payFrequency: number,
+  maxDeferralPct: number,
+  irsLimit: number,
+): number {
+  let annual: number;
+  if (mode === "dollar") {
+    annual = deferralDollarPerPaycheck * payFrequency;
+  } else {
+    annual = grossSalary * (deferralPercent / 100);
+  }
+
+  // Employer max-deferral cap (0 means no cap)
+  if (maxDeferralPct > 0) {
+    const capAmount = grossSalary * (maxDeferralPct / 100);
+    annual = Math.min(annual, capAmount);
+  }
+
+  // IRS elective limit
+  annual = Math.min(annual, irsLimit);
+
+  return Math.max(0, annual);
+}
+
+/**
+ * Compute the annual employer match from an N-tier schedule.
+ * Each tier specifies a match rate and the band of employee deferral it applies to.
+ * Tiers are evaluated in order; each tier consumes employee deferral percentage up to its `upToPct`.
+ */
+export function computeEmployerMatchFromTiers(
+  grossSalary: number,
+  employeeDeferralPct: number,
+  tiers: EmployerMatchTier[],
+): number {
+  if (tiers.length === 0 || grossSalary <= 0 || employeeDeferralPct <= 0) return 0;
+
+  let totalMatch = 0;
+  let remainingDeferralPct = employeeDeferralPct;
+
+  for (const tier of tiers) {
+    if (remainingDeferralPct <= 0) break;
+    const applicablePct = Math.min(remainingDeferralPct, tier.upToPct);
+    totalMatch += grossSalary * (applicablePct / 100) * (tier.matchPct / 100);
+    remainingDeferralPct -= applicablePct;
+  }
+
+  return totalMatch;
+}
+
 export function growBalance(balance: number, growthRate: number): number {
   return balance * (1 + growthRate);
 }

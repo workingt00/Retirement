@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { UserPlan, Move, ProfileAccount } from "@wealthpath/engine";
+import type { UserPlan, Move, ProfileAccount, EmployerMatchTier } from "@wealthpath/engine";
 import { DEFAULT_PLAN } from "@wealthpath/engine";
 
 interface PlanStore {
@@ -15,6 +15,9 @@ interface PlanStore {
   addAccount: () => void;
   removeAccount: (id: string) => void;
   updateAccount: (id: string, field: keyof ProfileAccount, value: unknown) => void;
+  addMatchTier: () => void;
+  removeMatchTier: (index: number) => void;
+  updateMatchTier: (index: number, field: keyof EmployerMatchTier, value: number) => void;
   markClean: () => void;
   reset: () => void;
 }
@@ -125,6 +128,47 @@ export const usePlanStore = create<PlanStore>((set, get) => ({
       a.id === id ? { ...a, [field]: value } : a,
     );
     const updated = { ...plan, accounts: newAccounts, updatedAt: new Date() };
+    set({ plan: updated, isDirty: true });
+    debouncedSave(updated, dbPlanId);
+  },
+
+  addMatchTier: () => {
+    const { plan, dbPlanId } = get();
+    if (!plan) return;
+    const tiers = [...(plan.income.employerMatchTiers ?? []), { matchPct: 100, upToPct: 1 }];
+    const updated = {
+      ...plan,
+      income: { ...plan.income, employerMatchTiers: tiers },
+      updatedAt: new Date(),
+    };
+    set({ plan: updated, isDirty: true });
+    debouncedSave(updated, dbPlanId);
+  },
+
+  removeMatchTier: (index) => {
+    const { plan, dbPlanId } = get();
+    if (!plan) return;
+    const tiers = (plan.income.employerMatchTiers ?? []).filter((_, i) => i !== index);
+    const updated = {
+      ...plan,
+      income: { ...plan.income, employerMatchTiers: tiers },
+      updatedAt: new Date(),
+    };
+    set({ plan: updated, isDirty: true });
+    debouncedSave(updated, dbPlanId);
+  },
+
+  updateMatchTier: (index, field, value) => {
+    const { plan, dbPlanId } = get();
+    if (!plan) return;
+    const tiers = (plan.income.employerMatchTiers ?? []).map((t, i) =>
+      i === index ? { ...t, [field]: value } : t,
+    );
+    const updated = {
+      ...plan,
+      income: { ...plan.income, employerMatchTiers: tiers },
+      updatedAt: new Date(),
+    };
     set({ plan: updated, isDirty: true });
     debouncedSave(updated, dbPlanId);
   },

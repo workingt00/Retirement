@@ -6,6 +6,13 @@ import { useMode } from "@/components/shared/ModeProvider";
 import { useSimulationContext } from "@/components/shared/SimulationProvider";
 import { usePlanStore } from "@/stores/planStore";
 import AnimatedNumber from "@/components/charts/AnimatedNumber";
+import {
+  computeAnnualDeferral,
+  computeEmployerMatchFromTiers,
+  computeAnnualExpenses,
+  IRS_401K_ELECTIVE_LIMIT,
+  STATE_TAX_RATES,
+} from "@wealthpath/engine";
 
 const FEASIBILITY_COLORS: Record<string, string> = {
   on_track: "#10B981",
@@ -87,7 +94,187 @@ function useDelta(current: MetricState) {
   return deltas;
 }
 
-export default function ProjectionPulse({ compact = false }: { compact?: boolean }) {
+function fmtCurrency(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 10_000) return `$${(v / 1_000).toFixed(1)}K`;
+  return `$${Math.round(v).toLocaleString()}`;
+}
+
+function fmtPct(v: number, decimals = 1): string {
+  return `${v.toFixed(decimals)}%`;
+}
+
+/* ─────────────────── Tab-specific context sections ─────────────────── */
+
+function ContextMetric({ label, value }: { label: string; value: string }) {
+  const { theme } = useMode();
+  return (
+    <div>
+      <div className="mb-0.5 text-[10px] uppercase tracking-wider" style={{ color: theme.textMuted }}>{label}</div>
+      <div className="text-sm font-semibold" style={{ color: theme.text, fontFamily: theme.fontMono }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function PersonalContext() {
+  const plan = usePlanStore((s) => s.plan);
+  if (!plan) return null;
+
+  const yearsUntil = plan.personal.retirementAge - plan.personal.currentAge;
+  const lifeExp = plan.scenarios.lifeExpectancy;
+  const lifeExpMax = plan.scenarios.lifeExpectancyMax;
+  const stateRate = STATE_TAX_RATES[plan.personal.state] ?? 0;
+  const retireStateRate = plan.personal.retirementState
+    ? STATE_TAX_RATES[plan.personal.retirementState] ?? stateRate
+    : stateRate;
+
+  return (
+    <div className="space-y-3">
+      <ContextMetric label="Years to retirement" value={`${yearsUntil} years`} />
+      <ContextMetric label="Life expectancy" value={`${lifeExp}–${lifeExpMax}`} />
+      <ContextMetric label="State tax rate" value={fmtPct(stateRate * 100, 2)} />
+      {plan.personal.retirementState && plan.personal.retirementState !== plan.personal.state && (
+        <ContextMetric label="Retirement state rate" value={fmtPct(retireStateRate * 100, 2)} />
+      )}
+    </div>
+  );
+}
+
+function IncomeContext() {
+  const plan = usePlanStore((s) => s.plan);
+  if (!plan) return null;
+
+  const { w2Salary, bonusIncome, otherIncome, salaryGrowthRate } = plan.income;
+  const commission = plan.income.commissionIncome ?? 0;
+  const rsu = plan.income.rsuIncome ?? 0;
+  const totalComp = w2Salary + bonusIncome + commission + rsu + otherIncome;
+  const deferralBase = w2Salary + bonusIncome + commission;
+
+  const deferral = computeAnnualDeferral(
+    deferralBase,
+    plan.income.deferralMode ?? "percent",
+    plan.income.deferralPercent ?? 0,
+    plan.income.deferralDollarPerPaycheck ?? 0,
+    plan.income.payFrequency ?? 24,
+    plan.income.maxDeferralPct ?? 0,
+    IRS_401K_ELECTIVE_LIMIT,
+  );
+  const effectivePct = deferralBase > 0 ? (deferral / deferralBase) * 100 : 0;
+  const match = computeEmployerMatchFromTiers(deferralBase, effectivePct, plan.income.employerMatchTiers ?? []);
+  const total401k = deferral + match;
+  const salary10y = w2Salary * Math.pow(1 + salaryGrowthRate / 100, 10);
+
+  return (
+    <div className="space-y-3">
+      <ContextMetric label="Total compensation" value={fmtCurrency(totalComp)} />
+      {total401k > 0 && <ContextMetric label="401(k) total" value={`${fmtCurrency(total401k)}/yr`} />}
+      {salaryGrowthRate > 0 && <ContextMetric label="Salary in 10 yrs" value={fmtCurrency(salary10y)} />}
+    </div>
+  );
+}
+
+function AccountsContext() {
+  const plan = usePlanStore((s) => s.plan);
+  if (!plan) return null;
+
+  const totalValue = plan.accounts.reduce((sum, a) => sum + a.currentBalance, 0);
+  const totalContrib = plan.accounts.reduce((sum, a) => sum + a.annualContribution, 0);
+  const avgReturn = plan.accounts.length > 0
+    ? plan.accounts.reduce((sum, a) => sum + a.expectedReturnRate, 0) / plan.accounts.length
+    : 0;
+
+  return (
+    <div className="space-y-3">
+      <ContextMetric label="Total portfolio" value={fmtCurrency(totalValue)} />
+      <ContextMetric label="Annual contributions" value={`${fmtCurrency(totalContrib)}/yr`} />
+      <ContextMetric label="Avg expected return" value={fmtPct(avgReturn)} />
+    </div>
+  );
+}
+
+function TaxesContext() {
+  const { result } = useSimulationContext();
+  const plan = usePlanStore((s) => s.plan);
+  if (!plan || !result) return null;
+
+  const effectiveRate = result.summary.effectiveTaxRate;
+  const marginalRate = result.years[0]?.federalMarginalRate ?? 0;
+  const stateRate = STATE_TAX_RATES[plan.personal.state] ?? 0;
+  const deduction = plan.tax.standardDeduction;
+
+  return (
+    <div className="space-y-3">
+      <ContextMetric label="Effective tax rate" value={fmtPct(effectiveRate * 100)} />
+      <ContextMetric label="Federal marginal" value={fmtPct(marginalRate * 100)} />
+      <ContextMetric label="State rate" value={fmtPct(stateRate * 100, 2)} />
+      <ContextMetric label="Standard deduction" value={fmtCurrency(deduction)} />
+    </div>
+  );
+}
+
+function BenefitsContext() {
+  const plan = usePlanStore((s) => s.plan);
+  if (!plan) return null;
+
+  const ssMonthly = plan.socialSecurity.monthlyBenefitAtFRA;
+  const claimAge = plan.socialSecurity.claimingAge;
+  const hasPension = plan.benefits.hasPension;
+  const pensionMonthly = plan.benefits.pensionMonthlyBenefit ?? 0;
+
+  return (
+    <div className="space-y-3">
+      <ContextMetric label="SS monthly at FRA" value={fmtCurrency(ssMonthly)} />
+      <ContextMetric label="Claiming age" value={String(claimAge)} />
+      <ContextMetric label="SS annual" value={`${fmtCurrency(ssMonthly * 12)}/yr`} />
+      {hasPension && pensionMonthly > 0 && (
+        <ContextMetric label="Pension monthly" value={fmtCurrency(pensionMonthly)} />
+      )}
+    </div>
+  );
+}
+
+function ExpensesContext() {
+  const plan = usePlanStore((s) => s.plan);
+  if (!plan) return null;
+
+  const exp = computeAnnualExpenses(plan);
+  const totalAnnual = exp.housing + exp.groceries + exp.bills + exp.lifestyle + exp.medical + exp.miscellaneous + exp.kids;
+  const monthlyBurn = Math.round(totalAnnual / 12);
+  const w2 = plan.income.w2Salary;
+  const ratio = w2 > 0 ? totalAnnual / w2 : 0;
+
+  return (
+    <div className="space-y-3">
+      <ContextMetric label="Annual expenses" value={fmtCurrency(totalAnnual)} />
+      <ContextMetric label="Monthly burn" value={fmtCurrency(monthlyBurn)} />
+      {w2 > 0 && <ContextMetric label="Expense-to-income" value={fmtPct(ratio * 100)} />}
+    </div>
+  );
+}
+
+const TAB_CONTEXT: Record<string, () => JSX.Element | null> = {
+  personal: PersonalContext,
+  income: IncomeContext,
+  accounts: AccountsContext,
+  taxes: TaxesContext,
+  benefits: BenefitsContext,
+  expenses: ExpensesContext,
+};
+
+const TAB_LABELS: Record<string, string> = {
+  personal: "Personal",
+  income: "Income",
+  accounts: "Accounts",
+  taxes: "Taxes",
+  benefits: "Benefits",
+  expenses: "Expenses",
+};
+
+/* ─────────────────── Main Component ─────────────────── */
+
+export default function ProjectionPulse({ compact = false, activeTab }: { compact?: boolean; activeTab?: string }) {
   const { theme } = useMode();
   const { result, goalResult } = useSimulationContext();
   const plan = usePlanStore((s) => s.plan);
@@ -147,6 +334,9 @@ export default function ProjectionPulse({ compact = false }: { compact?: boolean
       </div>
     );
   }
+
+  const ContextComponent = activeTab ? TAB_CONTEXT[activeTab] : null;
+  const tabLabel = activeTab ? TAB_LABELS[activeTab] : null;
 
   return (
     <motion.div
@@ -271,6 +461,38 @@ export default function ProjectionPulse({ compact = false }: { compact?: boolean
           </motion.span>
         </div>
       </div>
+
+      {/* ─── Tab-specific contextual info ─── */}
+      {ContextComponent && (
+        <>
+          <div
+            className="my-5"
+            style={{
+              height: 1,
+              background: `linear-gradient(90deg, transparent, ${theme.textMuted}30, transparent)`,
+            }}
+          />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25 }}
+            >
+              {tabLabel && (
+                <h4
+                  className="mb-3 text-[10px] font-semibold uppercase tracking-widest"
+                  style={{ color: theme.textMuted }}
+                >
+                  {tabLabel} Details
+                </h4>
+              )}
+              <ContextComponent />
+            </motion.div>
+          </AnimatePresence>
+        </>
+      )}
 
       <p className="mt-6 text-[10px] leading-tight" style={{ color: `${theme.textMuted}80` }}>
         For educational purposes only. Not financial advice.

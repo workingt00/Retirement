@@ -2,13 +2,17 @@
 
 import { useEffect } from "react";
 import { usePlanStore } from "@/stores/planStore";
-import { DEFAULT_PLAN } from "@wealthpath/engine";
+import { DEFAULT_PLAN, migratePlan } from "@wealthpath/engine";
+import type { UserPlan } from "@wealthpath/engine";
 
 export function usePlan() {
   const { plan, setPlan, updateField, toggleMove, updateMove, isDirty } =
     usePlanStore();
 
   useEffect(() => {
+    // Guard: don't re-fetch if plan is already loaded (prevents overwriting unsaved changes on re-mounts)
+    if (usePlanStore.getState().plan) return;
+
     // Load user's plans from server — use the most recent one
     fetch("/api/trpc/plan.list")
       .then((r) => r.json())
@@ -17,8 +21,8 @@ export function usePlan() {
         if (plans && plans.length > 0) {
           // Plans are ordered by updatedAt desc — use the first one
           const dbPlan = plans[0];
-          const planData = dbPlan.data as unknown as typeof DEFAULT_PLAN;
-          setPlan(planData, dbPlan.id);
+          const migrated = migratePlan(dbPlan.data as Record<string, unknown>) as unknown as UserPlan;
+          setPlan(migrated, dbPlan.id);
         } else {
           // No plans exist — create one
           const newPlan = {
