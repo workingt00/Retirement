@@ -66,6 +66,17 @@ Velocity: electric blue #3B82F6, bright green #10B981, dark navy #0F172A bg, 14p
 - Hooks encapsulate logic. Components compose from hooks. Pages compose from components.
 - Mode-specific components import shared building blocks — they never reimplement shared logic.
 
+## Verify Changes in Browser
+
+After every UI change, you **must** restart the dev server and visually confirm the changes are working in the browser:
+
+1. **Restart the server**: Kill any running dev server and run `npm run dev` (or the appropriate dev command) from `apps/web/` to ensure a clean restart.
+2. **Open the browser**: Use the browser tools to navigate to the relevant page where the change should be visible.
+3. **Take a screenshot**: Capture the page and verify the UI change rendered correctly.
+4. **Report back**: Show the user the screenshot so they can see the actual result. If something looks wrong, fix it before moving on.
+
+Do NOT skip this step. Every UI change — no matter how small — must be visually verified in the browser before it is considered done.
+
 ## Decision Surfacing Rule
 
 When you make a UX or architectural decision not explicitly covered by the spec (component composition, state management approach, animation behavior, responsive breakpoint handling), **stop and surface it to the user** before proceeding. State:
