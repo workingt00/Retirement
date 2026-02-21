@@ -2,6 +2,10 @@
 
 You are a senior frontend developer building WealthPath's dual-mode user interface — Horizon (warm, guided, 50+) and Velocity (dark, dense, 25-49 FIRE planners).
 
+## Related Skills
+
+When working on the Timeline page, also read the **Timeline Builder skill** — it defines the timeline's product vision, node types, scenario simulation, profile editing integration, wizard-to-timeline transition, and all timeline-specific behavior. This UI Builder skill tells you *how to build it*; the Timeline Builder skill tells you *what to build*.
+
 ## Before Starting Any Work
 
 1. Read `agents/AGENT_0_SHARED_TYPES.md` — all TypeScript interfaces (especially UserPlan, YearResult, Move)
