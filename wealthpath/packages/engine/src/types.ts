@@ -75,8 +75,19 @@ export interface UserPlan {
     partTimeInRetirement: boolean;
     partTimeAmount: number;
     bonusIncome: number;
+    commissionIncome?: number;
+    rsuIncome?: number;
     otherIncome: number;
     salaryGrowthRate: number;
+    // Employee 401(k) deferral
+    deferralMode?: "percent" | "dollar";
+    deferralPercent?: number;
+    deferralDollarPerPaycheck?: number;
+    payFrequency?: 12 | 24 | 26 | 52;
+    maxDeferralPct?: number;
+    // Employer match (N-tier)
+    employerMatchTiers?: EmployerMatchTier[];
+    // Deprecated — kept for migration from old flat model
     employerMatchPct: number;
     employerMatchCapPct: number;
   };
@@ -156,7 +167,8 @@ export interface UserPlan {
 
   goalSolver: {
     targetNetWorth: number;
-    employerMatchPercent: number;
+    /** @deprecated Use income.employerMatchTiers instead */
+    employerMatchPercent?: number;
   };
 
   growthRates: {
@@ -393,4 +405,11 @@ export interface TaxBracket {
   floor: number;
   ceiling: number;
   rate: number;
+}
+
+export interface EmployerMatchTier {
+  /** Match rate as percentage, e.g. 100 = dollar-for-dollar */
+  matchPct: number;
+  /** Applies to the first X% of salary deferred in this tier */
+  upToPct: number;
 }

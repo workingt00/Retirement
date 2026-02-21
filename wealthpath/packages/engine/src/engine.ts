@@ -16,7 +16,10 @@ import {
   computePrivatePortfolio,
   compute529,
   computeForeignPension,
+  computeAnnualDeferral,
+  computeEmployerMatchFromTiers,
 } from './accounts';
+import { IRS_401K_ELECTIVE_LIMIT } from './constants';
 import { isMoveActive, getMove, getMoveAmount, getCatchUpAmount, getRMDFactor } from './moves';
 import { computeW0 } from './w0-queue';
 import { computeSensitivity } from './sensitivity';
@@ -129,8 +132,32 @@ export function simulate(plan: UserPlan): SimulationResult {
       catchUpAmount = getCatchUpAmount(age, r1);
       if (catchUpAmount > 0) activeMoves.push("R1");
 
-      // Employer match
-      employerMatch = w2Income * plan.goalSolver.employerMatchPercent / 100;
+      // Employee deferral + employer match (tiered)
+      // Deferral base = W2 gross comp (salary + bonus + commission); RSUs excluded
+      const bonusIncome = isRetired ? 0 : (plan.income.bonusIncome ?? 0) * incomeFactor;
+      const commissionIncome = isRetired ? 0 : (plan.income.commissionIncome ?? 0) * incomeFactor;
+      const deferralBase = w2Income + bonusIncome + commissionIncome;
+      const tiers = plan.income.employerMatchTiers ?? [];
+      if (tiers.length > 0) {
+        const deferral = computeAnnualDeferral(
+          deferralBase,
+          plan.income.deferralMode ?? "percent",
+          plan.income.deferralPercent ?? 0,
+          plan.income.deferralDollarPerPaycheck ?? 0,
+          plan.income.payFrequency ?? 24,
+          plan.income.maxDeferralPct ?? 0,
+          IRS_401K_ELECTIVE_LIMIT,
+        );
+        // Override C1 move with computed deferral when deferral fields are set
+        if ((plan.income.deferralPercent ?? 0) > 0 || (plan.income.deferralDollarPerPaycheck ?? 0) > 0) {
+          tradContrib = deferral;
+        }
+        const effectivePct = deferralBase > 0 ? (deferral / deferralBase) * 100 : 0;
+        employerMatch = computeEmployerMatchFromTiers(deferralBase, effectivePct, tiers);
+      } else if ((plan.goalSolver as Record<string, unknown>).employerMatchPercent != null) {
+        // Legacy fallback for unmigrated plans
+        employerMatch = w2Income * ((plan.goalSolver as Record<string, unknown>).employerMatchPercent as number) / 100;
+      }
     }
 
     // ==================== CONVERSIONS ====================

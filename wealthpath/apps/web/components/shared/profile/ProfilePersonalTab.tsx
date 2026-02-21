@@ -1,11 +1,35 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import AgeInput from "@/components/shared/AgeInput";
+import ProfileChips from "@/components/shared/profile/ProfileChips";
+import InsightCard from "@/components/shared/profile/InsightCard";
+import AnimatedStack, { CollapsibleSection } from "@/components/shared/AnimatedStack";
+import { staggerItem } from "@/lib/animations";
 import { STATE_TAX_RATES } from "@wealthpath/engine";
 
 const STATES = Object.keys(STATE_TAX_RATES);
+
+const GENDER_OPTIONS = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+];
+
+const FILING_STATUS_OPTIONS = [
+  { value: "SINGLE", label: "Single" },
+  { value: "MFJ", label: "Married Filing Jointly" },
+  { value: "MFS", label: "Married Filing Separately" },
+  { value: "HOH", label: "Head of Household" },
+];
+
+const STANDARD_DEDUCTIONS: Record<string, number> = {
+  MFJ: 32200,
+  SINGLE: 16100,
+  MFS: 16100,
+  HOH: 24150,
+};
 
 export default function ProfilePersonalTab() {
   const { theme } = useMode();
@@ -14,72 +38,104 @@ export default function ProfilePersonalTab() {
 
   if (!plan) return null;
 
+  const { currentAge, retirementAge, state } = plan.personal;
+  const bothAgesSet = currentAge > 0 && retirementAge > 0;
+  const yearsUntilRetirement = retirementAge - currentAge;
+  const stateRate = STATE_TAX_RATES[state];
+
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <AnimatedStack gap={32}>
+      {/* Ages */}
+      <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-2" variants={staggerItem}>
         <AgeInput
           label="Current Age"
-          value={plan.personal.currentAge}
+          value={currentAge}
           onChange={(v) => updateField("personal.currentAge", v)}
           min={18}
           max={80}
         />
         <AgeInput
           label="Target Retirement Age"
-          value={plan.personal.retirementAge}
+          value={retirementAge}
           onChange={(v) => updateField("personal.retirementAge", v)}
           min={40}
           max={80}
         />
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Years until retirement insight */}
+      <CollapsibleSection open={bothAgesSet && yearsUntilRetirement > 0}>
+        <motion.div variants={staggerItem}>
+          <InsightCard icon="target" variant="info">
+            <strong>{yearsUntilRetirement} years</strong> until your target retirement
+          </InsightCard>
+        </motion.div>
+      </CollapsibleSection>
+
+      {/* Gender + Filing Status */}
+      <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-2" variants={staggerItem}>
         <div>
-          <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
+          <label className="mb-2 block text-sm font-medium" style={{ color: theme.textMuted }}>
             Gender
           </label>
-          <select
-            value={plan.personal.gender ?? ""}
-            onChange={(e) => updateField("personal.gender", e.target.value || undefined)}
-            className="w-full rounded-lg border py-3 pl-3 pr-8"
-            style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, minHeight: "48px" }}
-          >
-            <option value="">Select...</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
-          <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>Used for longevity modeling</p>
+          <div
+            style={{
+              height: 2,
+              width: 40,
+              background: `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+              borderRadius: 1,
+              marginBottom: 8,
+            }}
+          />
+          <ProfileChips
+            options={GENDER_OPTIONS}
+            value={plan.personal.gender}
+            onChange={(v) => updateField("personal.gender", v)}
+          />
+          <p className="mt-1.5 text-xs" style={{ color: theme.textMuted }}>
+            Used for longevity modeling
+          </p>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
+          <label className="mb-2 block text-sm font-medium" style={{ color: theme.textMuted }}>
             Filing Status
           </label>
-          <select
-            value={plan.personal.filingStatus}
-            onChange={(e) => {
-              const v = e.target.value;
-              updateField("personal.filingStatus", v);
-              const sd: Record<string, number> = { MFJ: 32200, SINGLE: 16100, MFS: 16100, HOH: 24150 };
-              updateField("tax.standardDeduction", sd[v] ?? 16100);
+          <div
+            style={{
+              height: 2,
+              width: 40,
+              background: `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+              borderRadius: 1,
+              marginBottom: 8,
             }}
-            className="w-full rounded-lg border py-3 pl-3 pr-8"
-            style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, minHeight: "48px" }}
-          >
-            <option value="SINGLE">Single</option>
-            <option value="MFJ">Married Filing Jointly</option>
-            <option value="MFS">Married Filing Separately</option>
-            <option value="HOH">Head of Household</option>
-          </select>
+          />
+          <ProfileChips
+            options={FILING_STATUS_OPTIONS}
+            value={plan.personal.filingStatus}
+            onChange={(v) => {
+              updateField("personal.filingStatus", v);
+              updateField("tax.standardDeduction", STANDARD_DEDUCTIONS[v] ?? 16100);
+            }}
+          />
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Dependents + State */}
+      <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-2" variants={staggerItem}>
         <div>
           <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
             Number of Dependents
           </label>
+          <div
+            style={{
+              height: 2,
+              width: 40,
+              background: `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+              borderRadius: 1,
+              marginBottom: 8,
+            }}
+          />
           <input
             type="number"
             value={plan.personal.dependents}
@@ -90,7 +146,15 @@ export default function ProfilePersonalTab() {
             min={0}
             max={20}
             className="w-24 rounded-lg border px-3 py-3"
-            style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, fontFamily: theme.fontMono, minHeight: "48px" }}
+            style={{
+              backgroundColor: theme.surfaceGlass,
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: `1px solid ${theme.borderGlass}`,
+              color: theme.text,
+              fontFamily: theme.fontFamily,
+              minHeight: "48px",
+            }}
           />
         </div>
 
@@ -98,31 +162,73 @@ export default function ProfilePersonalTab() {
           <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
             State of Residence
           </label>
+          <div
+            style={{
+              height: 2,
+              width: 40,
+              background: `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+              borderRadius: 1,
+              marginBottom: 8,
+            }}
+          />
           <select
-            value={plan.personal.state}
+            value={state}
             onChange={(e) => {
               updateField("personal.state", e.target.value);
               updateField("personal.stateEffectiveRate", STATE_TAX_RATES[e.target.value] ?? 0);
             }}
-            className="w-full rounded-lg border py-3 pl-3 pr-8"
-            style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, minHeight: "48px" }}
+            className="w-full rounded-lg py-3 pl-3 pr-8"
+            style={{
+              backgroundColor: theme.surfaceGlass,
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              border: `1px solid ${theme.borderGlass}`,
+              color: theme.text,
+              minHeight: "48px",
+            }}
           >
             {STATES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="md:w-1/2">
+      {/* State tax rate insight */}
+      <CollapsibleSection open={!!(state && stateRate !== undefined)}>
+        <motion.div variants={staggerItem}>
+          <InsightCard icon="info" variant="neutral">
+            {state} state income tax rate: <strong>{stateRate}%</strong>
+          </InsightCard>
+        </motion.div>
+      </CollapsibleSection>
+
+      {/* Retirement State */}
+      <motion.div className="md:w-1/2" variants={staggerItem}>
         <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
           Planned Retirement State
         </label>
+        <div
+          style={{
+            height: 2,
+            width: 40,
+            background: `linear-gradient(90deg, ${theme.gradientFrom}, ${theme.gradientTo})`,
+            borderRadius: 1,
+            marginBottom: 8,
+          }}
+        />
         <select
           value={plan.personal.retirementState ?? plan.personal.state}
           onChange={(e) => updateField("personal.retirementState", e.target.value)}
-          className="w-full rounded-lg border py-3 pl-3 pr-8"
-          style={{ backgroundColor: theme.surface, color: theme.text, borderColor: `${theme.textMuted}40`, minHeight: "48px" }}
+          className="w-full rounded-lg py-3 pl-3 pr-8"
+          style={{
+            backgroundColor: theme.surfaceGlass,
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            border: `1px solid ${theme.borderGlass}`,
+            color: theme.text,
+            minHeight: "48px",
+          }}
         >
           {STATES.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -131,7 +237,7 @@ export default function ProfilePersonalTab() {
         <p className="mt-1 text-xs" style={{ color: theme.textMuted }}>
           Defaults to your current state if not set
         </p>
-      </div>
-    </div>
+      </motion.div>
+    </AnimatedStack>
   );
 }

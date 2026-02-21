@@ -83,7 +83,7 @@ export default function CurrencyInput({
             color: theme.text,
             borderRadius: theme.radiusInput,
             border: `1px solid ${theme.textMuted}40`,
-            fontFamily: theme.fontMono,
+            fontFamily: theme.fontFamily,
             minHeight: "44px",
           }}
         />

@@ -9,6 +9,20 @@ import VelocityLayout from "@/components/velocity/VelocityLayout";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   usePlan(); // Loads plan into store on mount
+  const { setMode } = useMode();
+
+  // Restore user's saved mode from DB on mount
+  useEffect(() => {
+    fetch("/api/trpc/user.me")
+      .then((r) => r.json())
+      .then((data) => {
+        const savedMode = data?.result?.data?.mode;
+        if (savedMode === "horizon" || savedMode === "velocity") {
+          setMode(savedMode);
+        }
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <HorizonLayout>{children}</HorizonLayout>;
 }
