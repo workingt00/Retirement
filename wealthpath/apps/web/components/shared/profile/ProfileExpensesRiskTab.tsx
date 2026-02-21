@@ -1,12 +1,13 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import CurrencyInput from "@/components/shared/CurrencyInput";
 import InsightCard from "@/components/shared/profile/InsightCard";
 import AllocationDonut from "@/components/shared/profile/AllocationDonut";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import AnimatedStack from "@/components/shared/AnimatedStack";
+import { staggerItem } from "@/lib/animations";
 import type { MajorExpenditure } from "@wealthpath/engine";
 
 function fmtCurrency(v: number): string {
@@ -58,12 +59,7 @@ export default function ProfileExpensesRiskTab() {
   };
 
   return (
-    <motion.div
-      className="space-y-8"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <AnimatedStack gap={32}>
       {/* Expenses */}
       <motion.section variants={staggerItem}>
         <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.text }}>Expenses</h3>
@@ -268,6 +264,6 @@ export default function ProfileExpensesRiskTab() {
           </div>
         </div>
       </motion.section>
-    </motion.div>
+    </AnimatedStack>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import CurrencyInput from "@/components/shared/CurrencyInput";
 import SSClaimingSlider from "@/components/shared/profile/SSClaimingSlider";
 import InsightCard from "@/components/shared/profile/InsightCard";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import AnimatedStack, { CollapsibleSection } from "@/components/shared/AnimatedStack";
+import { staggerItem } from "@/lib/animations";
 
 function fmtCurrency(v: number): string {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -26,12 +27,7 @@ export default function ProfileBenefitsTab() {
   const claimingAge = plan.socialSecurity.claimingAge;
 
   return (
-    <motion.div
-      className="space-y-8"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <AnimatedStack gap={32}>
       {/* Social Security */}
       <motion.section variants={staggerItem}>
         <h3 className="mb-4 text-lg font-semibold" style={{ color: theme.text }}>Social Security</h3>
@@ -109,57 +105,48 @@ export default function ProfileBenefitsTab() {
             </span>
           </motion.div>
 
-          <AnimatePresence>
-            {plan.benefits.hasPension && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div
-                  className="grid grid-cols-1 gap-4 md:grid-cols-2"
+          <CollapsibleSection open={plan.benefits.hasPension}>
+            <div
+              className="grid grid-cols-1 gap-4 md:grid-cols-2"
+              style={{
+                backgroundColor: theme.surfaceGlass,
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+                border: `1px solid ${theme.borderGlass}`,
+                borderRadius: "16px",
+                padding: "16px",
+              }}
+            >
+              <div>
+                <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
+                  Pension Type
+                </label>
+                <select
+                  value={plan.benefits.pensionType ?? "defined_benefit"}
+                  onChange={(e) => updateField("benefits.pensionType", e.target.value)}
+                  className="w-full rounded-lg border py-3 pl-3 pr-8"
                   style={{
                     backgroundColor: theme.surfaceGlass,
                     backdropFilter: "blur(8px)",
                     WebkitBackdropFilter: "blur(8px)",
-                    border: `1px solid ${theme.borderGlass}`,
-                    borderRadius: "16px",
-                    padding: "16px",
+                    color: theme.text,
+                    borderColor: `${theme.textMuted}40`,
+                    minHeight: "48px",
                   }}
                 >
-                  <div>
-                    <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
-                      Pension Type
-                    </label>
-                    <select
-                      value={plan.benefits.pensionType ?? "defined_benefit"}
-                      onChange={(e) => updateField("benefits.pensionType", e.target.value)}
-                      className="w-full rounded-lg border py-3 pl-3 pr-8"
-                      style={{
-                        backgroundColor: theme.surfaceGlass,
-                        backdropFilter: "blur(8px)",
-                        WebkitBackdropFilter: "blur(8px)",
-                        color: theme.text,
-                        borderColor: `${theme.textMuted}40`,
-                        minHeight: "48px",
-                      }}
-                    >
-                      <option value="defined_benefit">Defined Benefit</option>
-                      <option value="defined_contribution">Defined Contribution</option>
-                    </select>
-                  </div>
-                  <CurrencyInput
-                    label="Expected Monthly Pension"
-                    value={plan.benefits.pensionMonthlyBenefit ?? 0}
-                    onChange={(v) => updateField("benefits.pensionMonthlyBenefit", v)}
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <option value="defined_benefit">Defined Benefit</option>
+                  <option value="defined_contribution">Defined Contribution</option>
+                </select>
+              </div>
+              <CurrencyInput
+                label="Expected Monthly Pension"
+                value={plan.benefits.pensionMonthlyBenefit ?? 0}
+                onChange={(v) => updateField("benefits.pensionMonthlyBenefit", v)}
+              />
+            </div>
+          </CollapsibleSection>
         </div>
       </motion.section>
-    </motion.div>
+    </AnimatedStack>
   );
 }

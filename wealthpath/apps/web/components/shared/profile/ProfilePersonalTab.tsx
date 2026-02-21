@@ -6,7 +6,8 @@ import { usePlanStore } from "@/stores/planStore";
 import AgeInput from "@/components/shared/AgeInput";
 import ProfileChips from "@/components/shared/profile/ProfileChips";
 import InsightCard from "@/components/shared/profile/InsightCard";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import AnimatedStack, { CollapsibleSection } from "@/components/shared/AnimatedStack";
+import { staggerItem } from "@/lib/animations";
 import { STATE_TAX_RATES } from "@wealthpath/engine";
 
 const STATES = Object.keys(STATE_TAX_RATES);
@@ -43,12 +44,7 @@ export default function ProfilePersonalTab() {
   const stateRate = STATE_TAX_RATES[state];
 
   return (
-    <motion.div
-      className="space-y-8"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <AnimatedStack gap={32}>
       {/* Ages */}
       <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-2" variants={staggerItem}>
         <AgeInput
@@ -68,13 +64,13 @@ export default function ProfilePersonalTab() {
       </motion.div>
 
       {/* Years until retirement insight */}
-      {bothAgesSet && yearsUntilRetirement > 0 && (
+      <CollapsibleSection open={bothAgesSet && yearsUntilRetirement > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="target" variant="info">
             <strong>{yearsUntilRetirement} years</strong> until your target retirement
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       {/* Gender + Filing Status */}
       <motion.div className="grid grid-cols-1 gap-4 md:grid-cols-2" variants={staggerItem}>
@@ -199,13 +195,13 @@ export default function ProfilePersonalTab() {
       </motion.div>
 
       {/* State tax rate insight */}
-      {state && stateRate !== undefined && (
+      <CollapsibleSection open={!!(state && stateRate !== undefined)}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="info" variant="neutral">
             {state} state income tax rate: <strong>{stateRate}%</strong>
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       {/* Retirement State */}
       <motion.div className="md:w-1/2" variants={staggerItem}>
@@ -242,6 +238,6 @@ export default function ProfilePersonalTab() {
           Defaults to your current state if not set
         </p>
       </motion.div>
-    </motion.div>
+    </AnimatedStack>
   );
 }

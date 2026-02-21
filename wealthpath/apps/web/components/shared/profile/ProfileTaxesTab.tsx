@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import { useSimulationContext } from "@/components/shared/SimulationProvider";
 import CurrencyInput from "@/components/shared/CurrencyInput";
 import InsightCard from "@/components/shared/profile/InsightCard";
 import ProfileChips from "@/components/shared/profile/ProfileChips";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import AnimatedStack, { CollapsibleSection } from "@/components/shared/AnimatedStack";
+import { staggerItem } from "@/lib/animations";
 
 const CONTRIBUTION_OPTIONS = [
   { value: "traditional", label: "Traditional" },
@@ -36,12 +37,7 @@ export default function ProfileTaxesTab() {
     : "$16,100";
 
   return (
-    <motion.div
-      className="space-y-8"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <AnimatedStack gap={32}>
       {/* Deduction Type Cards */}
       <motion.div variants={staggerItem}>
         <label className="mb-2 block text-sm font-medium" style={{ color: theme.textMuted }}>
@@ -153,13 +149,13 @@ export default function ProfileTaxesTab() {
       </motion.div>
 
       {/* Simulation Insight */}
-      {result?.summary?.effectiveTaxRate != null && (
+      <CollapsibleSection open={result?.summary?.effectiveTaxRate != null}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="chart" variant="info">
-            Estimated effective tax rate: <strong>{result.summary.effectiveTaxRate.toFixed(1)}%</strong>
+            Estimated effective tax rate: <strong>{result?.summary?.effectiveTaxRate?.toFixed(1) ?? 0}%</strong>
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       {/* Advanced Toggle */}
       <motion.div variants={staggerItem}>
@@ -188,119 +184,109 @@ export default function ProfileTaxesTab() {
       </motion.div>
 
       {/* Advanced Fields */}
-      <AnimatePresence>
-        {showAdvanced && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ overflow: "hidden" }}
-          >
-            <div
-              className="space-y-4 rounded-xl p-5"
-              style={{
-                backgroundColor: theme.surfaceGlass,
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: `1px solid ${theme.borderGlass}`,
-                boxShadow: theme.shadowCard,
-              }}
-            >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
-                    Federal Marginal Tax Bracket (%)
-                  </label>
-                  <select
-                    value={plan.tax.federalTaxBracket ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
-                      updateField("tax.federalTaxBracket", v);
-                    }}
-                    className="w-full rounded-lg border py-3 pl-3 pr-8"
-                    style={{
-                      backgroundColor: theme.surfaceGlass,
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
-                      color: theme.text,
-                      borderColor: `${theme.textMuted}40`,
-                      minHeight: "48px",
-                    }}
-                  >
-                    <option value="">Auto-derived from income</option>
-                    {[10, 12, 22, 24, 32, 35, 37].map((r) => (
-                      <option key={r} value={r}>{r}%</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
-                    State Tax Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    value={plan.tax.stateTaxRate ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
-                      if (v === undefined || (!isNaN(v) && v >= 0 && v <= 15)) {
-                        updateField("tax.stateTaxRate", v);
-                      }
-                    }}
-                    min={0}
-                    max={15}
-                    step={0.1}
-                    placeholder="Auto-derived"
-                    className="w-32 rounded-lg border px-3 py-3"
-                    style={{
-                      backgroundColor: theme.surfaceGlass,
-                      backdropFilter: "blur(8px)",
-                      WebkitBackdropFilter: "blur(8px)",
-                      color: theme.text,
-                      borderColor: `${theme.textMuted}40`,
-                      fontFamily: theme.fontFamily,
-                      minHeight: "48px",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {plan.tax.deductionType === "itemized" && (
-                <CurrencyInput
-                  label="Total Itemized Deductions"
-                  value={plan.tax.itemizedDeductions ?? 0}
-                  onChange={(v) => updateField("tax.itemizedDeductions", v)}
-                />
-              )}
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <CurrencyInput
-                  label="Taxable Brokerage Balance"
-                  value={plan.tax.taxableBrokerageBalance}
-                  onChange={(v) => updateField("tax.taxableBrokerageBalance", v)}
-                />
-                <div className="flex items-center gap-3 pt-6">
-                  <button
-                    role="switch"
-                    type="button"
-                    aria-checked={plan.tax.amtApplicable}
-                    onClick={() => updateField("tax.amtApplicable", !plan.tax.amtApplicable)}
-                    className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
-                    style={{ backgroundColor: plan.tax.amtApplicable ? theme.primary : `${theme.textMuted}40` }}
-                  >
-                    <span
-                      className="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
-                      style={{ transform: plan.tax.amtApplicable ? "translateX(22px)" : "translateX(2px)" }}
-                    />
-                  </button>
-                  <span className="text-sm" style={{ color: theme.text }}>Subject to AMT</span>
-                </div>
-              </div>
+      <CollapsibleSection open={showAdvanced}>
+        <div
+          className="space-y-4 rounded-xl p-5"
+          style={{
+            backgroundColor: theme.surfaceGlass,
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: `1px solid ${theme.borderGlass}`,
+            boxShadow: theme.shadowCard,
+          }}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
+                Federal Marginal Tax Bracket (%)
+              </label>
+              <select
+                value={plan.tax.federalTaxBracket ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                  updateField("tax.federalTaxBracket", v);
+                }}
+                className="w-full rounded-lg border py-3 pl-3 pr-8"
+                style={{
+                  backgroundColor: theme.surfaceGlass,
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  color: theme.text,
+                  borderColor: `${theme.textMuted}40`,
+                  minHeight: "48px",
+                }}
+              >
+                <option value="">Auto-derived from income</option>
+                {[10, 12, 22, 24, 32, 35, 37].map((r) => (
+                  <option key={r} value={r}>{r}%</option>
+                ))}
+              </select>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium" style={{ color: theme.textMuted }}>
+                State Tax Rate (%)
+              </label>
+              <input
+                type="number"
+                value={plan.tax.stateTaxRate ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value === "" ? undefined : parseFloat(e.target.value);
+                  if (v === undefined || (!isNaN(v) && v >= 0 && v <= 15)) {
+                    updateField("tax.stateTaxRate", v);
+                  }
+                }}
+                min={0}
+                max={15}
+                step={0.1}
+                placeholder="Auto-derived"
+                className="w-32 rounded-lg border px-3 py-3"
+                style={{
+                  backgroundColor: theme.surfaceGlass,
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                  color: theme.text,
+                  borderColor: `${theme.textMuted}40`,
+                  fontFamily: theme.fontFamily,
+                  minHeight: "48px",
+                }}
+              />
+            </div>
+          </div>
+
+          {plan.tax.deductionType === "itemized" && (
+            <CurrencyInput
+              label="Total Itemized Deductions"
+              value={plan.tax.itemizedDeductions ?? 0}
+              onChange={(v) => updateField("tax.itemizedDeductions", v)}
+            />
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <CurrencyInput
+              label="Taxable Brokerage Balance"
+              value={plan.tax.taxableBrokerageBalance}
+              onChange={(v) => updateField("tax.taxableBrokerageBalance", v)}
+            />
+            <div className="flex items-center gap-3 pt-6">
+              <button
+                role="switch"
+                type="button"
+                aria-checked={plan.tax.amtApplicable}
+                onClick={() => updateField("tax.amtApplicable", !plan.tax.amtApplicable)}
+                className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
+                style={{ backgroundColor: plan.tax.amtApplicable ? theme.primary : `${theme.textMuted}40` }}
+              >
+                <span
+                  className="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: plan.tax.amtApplicable ? "translateX(22px)" : "translateX(2px)" }}
+                />
+              </button>
+              <span className="text-sm" style={{ color: theme.text }}>Subject to AMT</span>
+            </div>
+          </div>
+        </div>
+      </CollapsibleSection>
+    </AnimatedStack>
   );
 }

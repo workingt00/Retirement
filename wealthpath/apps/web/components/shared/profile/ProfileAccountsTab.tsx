@@ -5,7 +5,8 @@ import { useMode } from "@/components/shared/ModeProvider";
 import { usePlanStore } from "@/stores/planStore";
 import CurrencyInput from "@/components/shared/CurrencyInput";
 import InsightCard from "@/components/shared/profile/InsightCard";
-import { staggerContainer, staggerItem, scaleIn } from "@/lib/animations";
+import AnimatedStack, { CollapsibleSection } from "@/components/shared/AnimatedStack";
+import { staggerItem, scaleIn } from "@/lib/animations";
 import type { ProfileAccount, AccountType } from "@wealthpath/engine";
 
 const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
@@ -164,12 +165,7 @@ export default function ProfileAccountsTab() {
   const totalBalance = plan.accounts.reduce((sum, a) => sum + a.currentBalance, 0);
 
   return (
-    <motion.div
-      className="space-y-4"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <AnimatedStack gap={16}>
       <motion.div variants={staggerItem}>
         <div
           className="rounded-xl p-4"
@@ -181,13 +177,13 @@ export default function ProfileAccountsTab() {
         </div>
       </motion.div>
 
-      {totalBalance > 0 && (
+      <CollapsibleSection open={totalBalance > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="chart" variant="info">
             Total portfolio balance: <strong>${totalBalance.toLocaleString()}</strong>
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       <AnimatePresence mode="popLayout">
         {plan.accounts.map((account) => (
@@ -215,6 +211,6 @@ export default function ProfileAccountsTab() {
           + Add Account
         </motion.button>
       </motion.div>
-    </motion.div>
+    </AnimatedStack>
   );
 }

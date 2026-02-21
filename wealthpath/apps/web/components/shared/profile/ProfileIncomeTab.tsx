@@ -8,7 +8,8 @@ import CurrencyInput from "@/components/shared/CurrencyInput";
 import ProfileChips from "@/components/shared/profile/ProfileChips";
 import InsightCard from "@/components/shared/profile/InsightCard";
 import AnimatedValue from "@/components/shared/profile/AnimatedValue";
-import { staggerContainer, staggerItem } from "@/lib/animations";
+import AnimatedStack, { CollapsibleSection } from "@/components/shared/AnimatedStack";
+import { staggerItem } from "@/lib/animations";
 import { computeAnnualDeferral, computeEmployerMatchFromTiers, IRS_401K_ELECTIVE_LIMIT } from "@wealthpath/engine";
 import type { EmployerMatchTier } from "@wealthpath/engine";
 
@@ -139,12 +140,7 @@ export default function ProfileIncomeTab() {
   const isCustomTiers = matchTiers.length > 0 && activePresetIdx === -1;
 
   return (
-    <motion.div
-      className="space-y-8"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
+    <AnimatedStack gap={32}>
       {/* ═══════════════ SALARY ═══════════════ */}
       <motion.div variants={staggerItem}>
         <CurrencyInput
@@ -182,14 +178,14 @@ export default function ProfileIncomeTab() {
         />
       </motion.div>
 
-      {/* Total compensation insight — right after income fields */}
-      {w2Salary > 0 && (
+      {/* Total compensation insight — collapses smoothly when no salary */}
+      <CollapsibleSection open={w2Salary > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="chart" variant="neutral">
             Total compensation: <strong>{fmtCurrency(totalComp)}</strong>/yr
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       {/* ═══════════════ SALARY GROWTH ═══════════════ */}
       <motion.div variants={staggerItem}>
@@ -253,15 +249,15 @@ export default function ProfileIncomeTab() {
         </div>
       </motion.div>
 
-      {/* Salary growth insight — right after slider */}
-      {w2Salary > 0 && debouncedGrowth > 0 && (
+      {/* Salary growth insight — collapses when no salary or zero growth */}
+      <CollapsibleSection open={w2Salary > 0 && debouncedGrowth > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="sparkle" variant="success">
             At <strong><AnimatedValue value={`${Math.round(debouncedGrowth * 10) / 10}%`} /></strong> annual growth, projected salary in 10 years:{" "}
             <strong><AnimatedValue value={fmtCurrency(projectedSalary10y)} /></strong>
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       {/* ═══════════════ 401(k) DEFERRAL ═══════════════ */}
       <motion.div variants={staggerItem}>
@@ -297,7 +293,7 @@ export default function ProfileIncomeTab() {
           onChange={(v) => updateField("income.deferralMode", v)}
         />
 
-        {/* CSS grid overlay: both panels always mounted, active panel visible via CSS opacity transition */}
+        {/* Both panels always mounted; instant swap via visibility, no transition */}
         <div className="mt-3" style={{ display: "grid" }}>
           <div
             className="grid grid-cols-1 gap-4 md:grid-cols-2"
@@ -437,8 +433,8 @@ export default function ProfileIncomeTab() {
         </InsightCard>
       </motion.div>
 
-      {/* Leaving money on table — always rendered, content updates in place */}
-      {matchTiers.length > 0 && (
+      {/* Leaving money on table — always rendered when match tiers exist, content updates in place */}
+      <CollapsibleSection open={matchTiers.length > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard
             icon={leavingOnTable > 0 ? "info" : "sparkle"}
@@ -464,7 +460,7 @@ export default function ProfileIncomeTab() {
             )}
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
       {/* ═══════════════ EMPLOYER MATCH TIERS ═══════════════ */}
       <motion.div variants={staggerItem}>
@@ -588,8 +584,8 @@ export default function ProfileIncomeTab() {
         )}
       </motion.div>
 
-      {/* Match + 401(k) total insights — right after match section */}
-      {annualMatch > 0 && (
+      {/* Match + 401(k) total insights — collapse smoothly */}
+      <CollapsibleSection open={annualMatch > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="sparkle" variant="success">
             {isHorizon ? (
@@ -605,9 +601,9 @@ export default function ProfileIncomeTab() {
             )}
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
-      {total401k > 0 && (
+      <CollapsibleSection open={total401k > 0}>
         <motion.div variants={staggerItem}>
           <InsightCard icon="target" variant="info">
             {isHorizon ? (
@@ -623,8 +619,8 @@ export default function ProfileIncomeTab() {
             )}
           </InsightCard>
         </motion.div>
-      )}
+      </CollapsibleSection>
 
-    </motion.div>
+    </AnimatedStack>
   );
 }
