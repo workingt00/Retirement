@@ -49,7 +49,11 @@ function HorizonTimeline() {
                   </span>
                 )}
                 <div
-                  className="h-8 w-8 rounded-full text-[10px] font-medium leading-8 text-center transition-colors"
+                  className={`rounded-full font-medium text-center transition-colors ${
+                    milestone
+                      ? "h-8 w-8 text-[10px] leading-8"
+                      : "h-10 w-10 text-xs leading-10"
+                  }`}
                   style={{
                     backgroundColor: isSelected
                       ? theme.primary
